@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ATP vs WTA Prize Money by Surface</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; }
+    .tooltip {
+      position: absolute;
+      background: white;
+      border: 1px solid #999;
+      padding: 8px 10px;
+      border-radius: 6px;
+      pointer-events: none;
+      opacity: 0;
+    }
+  </style>
+</head>
+<body>
+  <h2>ATP vs WTA Average Prize Money by Surface</h2>
+  <div id="chart"></div>
+  <div class="tooltip" id="tooltip"></div>
+
+  <script>
+    const data = [
+      { surface: "Clay", ATP: 5.2, WTA: 4.8 },
+      { surface: "Grass", ATP: 6.1, WTA: 5.7 },
+      { surface: "Hard", ATP: 5.8, WTA: 5.4 },
+      { surface: "Indoor", ATP: 4.9, WTA: 4.5 },
+      { surface: "Carpet", ATP: 4.2, WTA: 3.9 }
+    ];
+
+    const subgroups = ["ATP", "WTA"];
+    const groups = data.map(d => d.surface);
+
+    const margin = { top: 50, right: 120, bottom: 50, left: 60 };
+    const width = 800 - margin.left - margin.right;
+    const height = 450 - margin.top - margin.bottom;
+
+    const svg = d3.select("#chart")
+      .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    // x0 places the outer groups (surface categories)
+    const x0 = d3.scaleBand()
+      .domain(groups)
+      .range([0, width])
+      .padding(0.2);
+
+    // x1 places the inner bars (ATP/WTA) inside each outer group
+    const x1 = d3.scaleBand()
+      .domain(subgroups)
+      .range([0, x0.bandwidth()])
+      .padding(0.1);
+
+    // y maps numeric prize money values to vertical positions
+    const y = d3.scaleLinear()
+      .domain([0, 7])
+      .nice()
+      .range([height, 0]);
+
+    // color gives each subgroup a different fill color
+    const color = d3.scaleOrdinal()
+      .domain(subgroups)
+      .range(["#2563eb", "#0f766e"]);
+
+    svg.append("g")
+      .attr("transform", `translate(0,${height})`)
+      .call(d3.axisBottom(x0));
+
+    svg.append("g")
+      .call(d3.axisLeft(y));
+
+    const tooltip = d3.select("#tooltip");
+
+    svg.append("g")
+      .selectAll("g")
+      .data(data)
+      .join("g")
+        .attr("transform", d => `translate(${x0(d.surface)},0)`)
+      .selectAll("rect")
+      .data(d => subgroups.map(key => ({ key: key, value: d[key], surface: d.surface })))
+      .join("rect")
+        .attr("x", d => x1(d.key))
+        .attr("y", d => y(d.value))
+        .attr("width", x1.bandwidth())
+        .attr("height", d => height - y(d.value))
+        .attr("fill", d => color(d.key))
+        // Added interaction: tooltip on hover
+        .on("mouseover", function(event, d) {
+          tooltip
+            .style("opacity", 1)
+            .html(`<strong>${d.key}</strong><br>Surface: ${d.surface}<br>Prize Money: $${d.value}M`);
+        })
+        .on("mousemove", function(event) {
+          tooltip
+            .style("left", (event.pageX + 12) + "px")
+            .style("top", (event.pageY - 28) + "px");
+        })
+        .on("mouseout", function() {
+          tooltip.style("opacity", 0);
+        });
+
+    const legend = svg.append("g")
+      .attr("transform", `translate(${width + 20},0)`);
+
+    subgroups.forEach((key, i) => {
+      const row = legend.append("g")
+        .attr("transform", `translate(0,${i * 25})`);
+
+      row.append("rect")
+        .attr("width", 14)
+        .attr("height", 14)
+        .attr("fill", color(key));
+
+      row.append("text")
+        .attr("x", 20)
+        .attr("y", 12)
+        .text(key);
+    });
+  </script>
+</body>
+</html>
